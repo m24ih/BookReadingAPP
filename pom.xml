@@ -41,12 +41,6 @@
             <artifactId>jai-imageio-core</artifactId>
             <version>1.4.0</version> <!-- Veya PDFBox'un önerdiği/gerektirdiği sürüm -->
         </dependency>
-        <dependency>
-            <groupId>io.documentnode</groupId>
-            <artifactId>epub4j-core</artifactId>
-            <version>4.2.2</version>
-        </dependency>
-
     </dependencies>
 
     <build>

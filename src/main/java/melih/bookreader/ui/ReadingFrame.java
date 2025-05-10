@@ -11,7 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 
-public class ReadingFrame extends JFrame{
+public class ReadingFrame extends JFrame {
     private JTextArea bookTextArea;
     private JButton prevButton;
     private JButton nextButton;
@@ -26,13 +26,12 @@ public class ReadingFrame extends JFrame{
         setTitle("Simple Book Reader");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Center window
+        setLocationRelativeTo(null);
 
         initComponents();
         layoutComponents();
         addListeners();
-
-        updateUI(); // Initially disable buttons etc.
+        updateUI();
     }
 
     private void initComponents() {
@@ -46,10 +45,9 @@ public class ReadingFrame extends JFrame{
         nextButton = new JButton("Next");
         pageInfoLabel = new JLabel("Page: -/-");
 
-        // Menu
         menuBar = new JMenuBar();
         fileMenu = new JMenu("File");
-        openMenuItem = new JMenuItem("Open Text File...");
+        openMenuItem = new JMenuItem("Open Book..."); // Genel bir isim
         fileMenu.add(openMenuItem);
         menuBar.add(fileMenu);
         setJMenuBar(menuBar);
@@ -57,10 +55,8 @@ public class ReadingFrame extends JFrame{
 
     private void layoutComponents() {
         setLayout(new BorderLayout());
-
         JScrollPane scrollPane = new JScrollPane(bookTextArea);
         add(scrollPane, BorderLayout.CENTER);
-
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         bottomPanel.add(prevButton);
         bottomPanel.add(pageInfoLabel);
@@ -98,28 +94,37 @@ public class ReadingFrame extends JFrame{
     private void openFile() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open Book File");
+
         FileNameExtensionFilter txtFilter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
         FileNameExtensionFilter pdfFilter = new FileNameExtensionFilter("PDF Files (*.pdf)", "pdf");
         fileChooser.addChoosableFileFilter(txtFilter);
         fileChooser.addChoosableFileFilter(pdfFilter);
-        fileChooser.setFileFilter(pdfFilter); // Optionally set PDF as default or the combined filter
+
+        fileChooser.setFileFilter(pdfFilter);
+        fileChooser.setAcceptAllFileFilterUsed(true);
 
         int result = fileChooser.showOpenDialog(this);
+
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
             String fileName = selectedFile.getName().toLowerCase();
+            currentBook = null; // Önceki kitabı temizle
 
             if (fileName.endsWith(".txt")) {
                 currentBook = TextFileLoader.loadBook(selectedFile);
             } else if (fileName.endsWith(".pdf")) {
                 currentBook = PdfFileLoader.loadBook(selectedFile);
             } else {
-                JOptionPane.showMessageDialog(this, "Unsupported file type.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Unsupported file type: " + fileName, "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
             if (currentBook != null) {
-                setTitle(currentBook.getTitle() + " - Simple Book Reader");
+                // Kitap başlığı ve yazarını pencere başlığına ekleyelim (eğer yazar varsa)
+                String windowTitle = currentBook.getTitle();
+                if (currentBook.getAuthor() != null && !currentBook.getAuthor().isEmpty() && !currentBook.getAuthor().trim().equals("Unknown Author")) {
+                    windowTitle += " by " + currentBook.getAuthor();
+                }
+                setTitle(windowTitle + " - Book Reader");
                 updateUI();
             } else {
                 JOptionPane.showMessageDialog(this, "Could not load book from " + selectedFile.getName(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -130,23 +135,24 @@ public class ReadingFrame extends JFrame{
     private void updateUI() {
         if (currentBook != null) {
             bookTextArea.setText(currentBook.getCurrentPageContent());
-            bookTextArea.setCaretPosition(0); // Scroll to top
-            pageInfoLabel.setText("Page: " + (currentBook.getCurrentPageIndex() + 1) + "/" + currentBook.getTotalPages());
+            bookTextArea.setCaretPosition(0);
+            String pageInfo = "Page: " + (currentBook.getCurrentPageIndex() + 1) + "/" + currentBook.getTotalPages();
+            pageInfoLabel.setText(pageInfo);
             prevButton.setEnabled(currentBook.getCurrentPageIndex() > 0);
             nextButton.setEnabled(currentBook.getCurrentPageIndex() < currentBook.getTotalPages() - 1);
         } else {
-            bookTextArea.setText("Open a book using File > Open Text File...");
+            bookTextArea.setText("Open a book using File > Open Book...");
             pageInfoLabel.setText("Page: -/-");
             prevButton.setEnabled(false);
             nextButton.setEnabled(false);
         }
     }
 
+
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new ReadingFrame().setVisible(true);
-            }
+        SwingUtilities.invokeLater(() -> {
+            new ReadingFrame().setVisible(true);
         });
     }
 }
