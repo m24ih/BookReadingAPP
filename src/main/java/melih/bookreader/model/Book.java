@@ -13,12 +13,11 @@ public class Book {
         this.title = title;
         this.pages = pages;
         this.currentPageIndex = 0;
-        this.author = "Unknown Author"; // Varsayılan değer
+        this.author = "Unknown Author";
     }
 
-    // Getter'lar...
     public String getTitle() { return title; }
-    public String getAuthor() { return author; } // Author için getter
+    public String getAuthor() { return author; }
     public List<String> getPages() { return pages; }
     public int getCurrentPageIndex() { return currentPageIndex; }
 
@@ -50,7 +49,7 @@ public class Book {
     }
 
     // Setter
-    public void setAuthor(String author) { // Author için setter
+    public void setAuthor(String author) {
         this.author = author;
     }
 }

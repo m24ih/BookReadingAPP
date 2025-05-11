@@ -1,9 +1,7 @@
 // src/main/java/melih/bookreader/core/RsvpController.java
 package melih.bookreader.core;
 
-import javax.swing.Timer; // Timer için doğru import
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.Timer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,11 +15,11 @@ public class RsvpController {
     private int rsvpDelayMilliseconds;
     private boolean isActive = false;
 
-    private Consumer<String> wordDisplayCallback; // Kelimeyi UI'da gösterecek metod
-    private Supplier<String> pageContentSupplier; // Mevcut sayfa içeriğini sağlayacak metod
-    private Runnable nextPageAction;          // Bir sonraki sayfaya geçme eylemi
-    private Runnable endOfBookAction;         // Kitabın sonuna gelindiğinde yapılacak eylem
-    private Runnable pageEndedAction;         // Sayfa bittiğinde (ama kitap bitmediyse) yapılacak eylem
+    private Consumer<String> wordDisplayCallback;
+    private Supplier<String> pageContentSupplier;
+    private Runnable nextPageAction;
+    private Runnable endOfBookAction;
+    private Runnable pageEndedAction;
 
     private int lastWordIndexForCurrentPage = 0;
 
@@ -47,7 +45,7 @@ public class RsvpController {
         if (pageText == null || pageText.trim().isEmpty() || pageText.equals("No content available or end of book.")) {
             wordDisplayCallback.accept("Page is empty.");
             isActive = false;
-            if (pageEndedAction != null) pageEndedAction.run(); // RSVP'yi durdurmak için UI'a bilgi ver
+            if (pageEndedAction != null) pageEndedAction.run();
             return;
         }
 
@@ -56,7 +54,7 @@ public class RsvpController {
 
         currentWordIndex = lastWordIndexForCurrentPage;
         if (currentWordIndex >= currentWords.size() && !currentWords.isEmpty()) {
-            currentWordIndex = 0; // Sayfanın sonuna gelinmişse baştan başla
+            currentWordIndex = 0;
             lastWordIndexForCurrentPage = 0;
         }
 
@@ -69,18 +67,12 @@ public class RsvpController {
         }
 
         isActive = true;
-        timer.setDelay(rsvpDelayMilliseconds); // Mevcut hızı kullan
+        timer.setDelay(rsvpDelayMilliseconds);
         timer.start();
-        // İlk kelimeyi hemen göster
         if (currentWordIndex < currentWords.size()) {
             wordDisplayCallback.accept(currentWords.get(currentWordIndex));
-            // currentWordIndex timer tarafından bir sonraki adımda artırılacak.
-            // Ya da ilk kelime için hemen artırıp timer'ın ilkinde aynı kelimeyi göstermesini engelleyebiliriz.
-            // Şimdilik timer'ın ilk tetiklemesinde ikinci kelimeye geçmesini sağlayalım.
-            // VEYA: showNextWord'ü burada bir kez çağırıp, timer'ın ilk tetiklenmesini initialDelay ile yapabiliriz.
-            // En temizi: currentWordIndex'i burada artırmayalım, showNextWord her zaman currentWordIndex'i gösterip sonra artırsın.
         } else {
-            showNextWord(); // Sayfa sonu veya kitap sonu mantığını tetikle
+            showNextWord();
         }
     }
 
@@ -88,7 +80,7 @@ public class RsvpController {
         timer.stop();
         isActive = false;
         if (currentWords != null && currentWordIndex > 0 && currentWordIndex <= currentWords.size()) {
-            lastWordIndexForCurrentPage = currentWordIndex -1; // En son gösterilen
+            lastWordIndexForCurrentPage = currentWordIndex -1;
             if (lastWordIndexForCurrentPage < 0) lastWordIndexForCurrentPage = 0;
         } else if (currentWords != null && currentWordIndex == 0 && !currentWords.isEmpty()) {
             lastWordIndexForCurrentPage = 0;
@@ -97,10 +89,10 @@ public class RsvpController {
 
     private void showNextWord() {
         if (currentWords == null || currentWordIndex >= currentWords.size()) {
-            lastWordIndexForCurrentPage = 0; // Sayfa bitti, bir sonraki başlangıç için sıfırla
+            lastWordIndexForCurrentPage = 0;
             if (nextPageAction != null) {
-                nextPageAction.run(); // Bu, ReadingFrame'de currentBook.nextPage() ve startRsvp() çağıracak
-            } else if (endOfBookAction != null) { // nextPageAction null ise kitap sonu olabilir
+                nextPageAction.run();
+            } else if (endOfBookAction != null) {
                 endOfBookAction.run();
             }
             return;
@@ -128,6 +120,6 @@ public class RsvpController {
 
     public void resetWordIndexForNewPage() {
         this.lastWordIndexForCurrentPage = 0;
-        this.currentWordIndex = 0; // Mevcut kelimeyi de sıfırla
+        this.currentWordIndex = 0;
     }
 }

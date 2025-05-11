@@ -27,7 +27,6 @@ public class PdfFileLoader {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            // Consider throwing a custom exception or returning null with a log
             return null;
         }
 

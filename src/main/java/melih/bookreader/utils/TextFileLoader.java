@@ -24,7 +24,7 @@ public class TextFileLoader {
                 lineCount++;
                 if (lineCount >= LINES_PER_PAGE) {
                     pages.add(currentPageContent.toString());
-                    currentPageContent.setLength(0); // Clear for next page
+                    currentPageContent.setLength(0);
                     lineCount = 0;
                 }
             }
@@ -34,7 +34,7 @@ public class TextFileLoader {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            return null; // Or throw a custom exception
+            return null;
         }
 
         // Extract title from filename (simple approach)
