@@ -1,4 +1,3 @@
-// src/main/java/melih/bookreader/ui/ReadingFrame.java
 package melih.bookreader.ui;
 
 import melih.bookreader.model.Book;
@@ -34,25 +33,26 @@ public class ReadingFrame extends JFrame {
     private List<String> currentWords;
     private int currentWordIndex;
     private boolean isRsvpActive = false;
-    private int rsvpDelayMilliseconds = 500; // Varsayılan 0.5 saniye
+    private int rsvpDelayMilliseconds = 500;
     private JSlider speedSlider;
     private JLabel speedLabel;
 
     private JPanel centerPanel;
     private CardLayout cardLayout;
 
+    private int lastRsvpWordIndexForCurrentPage = 0; // Mevcut sayfa için son kalınan RSVP kelime indeksi
+
     public ReadingFrame() {
         setTitle("Simple Book Reader");
-        setSize(800, 650); // TopPanel için biraz yükseklik
+        setSize(800, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         initComponents();
         layoutComponents();
-        initRsvpTimer(); // Timer'ı oluştur
-        addListeners();  // Listener'ları timer oluşturulduktan sonra ekle
-
-        updateUI(); // Başlangıç UI durumu
+        initRsvpTimer();
+        addListeners();
+        updateUI();
     }
 
     private void initComponents() {
@@ -76,7 +76,7 @@ public class ReadingFrame extends JFrame {
         speedSlider.setPaintTicks(true);
         speedSlider.setToolTipText("Adjust RSVP reading speed (delay between words in ms)");
 
-        speedLabel = new JLabel(); // updateRsvpSpeed ile doldurulacak
+        speedLabel = new JLabel();
 
         menuBar = new JMenuBar();
         fileMenu = new JMenu("File");
@@ -120,14 +120,8 @@ public class ReadingFrame extends JFrame {
     }
 
     private void initRsvpTimer() {
-        updateRsvpSpeed(); // Slider'ın başlangıç değerine göre hızı ve etiketi ayarla
-
-        rsvpTimer = new Timer(rsvpDelayMilliseconds, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showNextRsvpWord();
-            }
-        });
+        updateRsvpSpeed();
+        rsvpTimer = new Timer(rsvpDelayMilliseconds, e -> showNextRsvpWord());
         rsvpTimer.setRepeats(true);
     }
 
@@ -135,12 +129,13 @@ public class ReadingFrame extends JFrame {
         openMenuItem.addActionListener(e -> openFile());
 
         nextButton.addActionListener(e -> {
-            if (isRsvpActive) toggleRsvp(); // RSVP aktifse normale dön ve durdur
+            if (isRsvpActive) toggleRsvp();
             if (currentBook != null && currentBook.nextPage()) {
                 bookTextArea.setText(currentBook.getCurrentPageContent());
                 bookTextArea.setCaretPosition(0);
                 updatePageInfo();
                 updatePageNavigationButtons();
+                lastRsvpWordIndexForCurrentPage = 0; // Yeni sayfa, RSVP indeksini sıfırla
             }
         });
 
@@ -151,17 +146,13 @@ public class ReadingFrame extends JFrame {
                 bookTextArea.setCaretPosition(0);
                 updatePageInfo();
                 updatePageNavigationButtons();
+                lastRsvpWordIndexForCurrentPage = 0; // Yeni sayfa, RSVP indeksini sıfırla
             }
         });
 
         rsvpButton.addActionListener(e -> toggleRsvp());
 
-        speedSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                updateRsvpSpeed();
-            }
-        });
+        speedSlider.addChangeListener(e -> updateRsvpSpeed());
     }
 
     private void toggleRsvp() {
@@ -173,12 +164,11 @@ public class ReadingFrame extends JFrame {
         isRsvpActive = !isRsvpActive;
 
         if (isRsvpActive) {
-            startRsvp(); // Kelimeleri yükle
-            if (currentWords == null || currentWords.isEmpty()) { // startRsvp kelime yükleyemezse (örn: sayfa boş)
-                isRsvpActive = false; // RSVP'yi başlatma
-                // startRsvp içinde zaten mesaj gösterilmiş olabilir veya burada gösterilebilir.
-                // JOptionPane.showMessageDialog(this, "Cannot start RSVP on an empty page.", "RSVP Info", JOptionPane.INFORMATION_MESSAGE);
-                return; // RSVP moduna geçme
+            startRsvp();
+            if (currentWords == null || currentWords.isEmpty()) {
+                isRsvpActive = false; // Başlatılamadı, geri al
+                // startRsvp zaten mesaj vermiş olabilir veya rsvpLabel'a yazmış olabilir.
+                return;
             }
             cardLayout.show(centerPanel, "RSVP_VIEW");
             rsvpButton.setText("Stop RSVP");
@@ -187,13 +177,12 @@ public class ReadingFrame extends JFrame {
             openMenuItem.setEnabled(false);
             speedSlider.setEnabled(false);
         } else {
-            stopRsvp();
+            stopRsvp(); // Bu, lastRsvpWordIndexForCurrentPage'i güncelleyecek
             cardLayout.show(centerPanel, "NORMAL_VIEW");
             rsvpButton.setText("Start RSVP");
             updatePageNavigationButtons();
             openMenuItem.setEnabled(true);
             speedSlider.setEnabled(true);
-            // Normal görünüme döndüğümüzde metin alanını güncelle
             if (currentBook != null) {
                 bookTextArea.setText(currentBook.getCurrentPageContent());
                 bookTextArea.setCaretPosition(0);
@@ -210,49 +199,65 @@ public class ReadingFrame extends JFrame {
 
         String currentPageText = currentBook.getCurrentPageContent();
         if (currentPageText.trim().isEmpty() || currentPageText.equals("No content available or end of book.")) {
-            rsvpLabel.setText("Page is empty or unavailable."); // RSVP label'ında göster
-            currentWords = null; // Kelime listesini null yap
-            // Otomatik sonraki sayfaya geçmeyi burada deneyebiliriz, ancak toggleRsvp'den çağrıldığı için karmaşıklaşabilir.
-            // Şimdilik kullanıcıya bırakalım.
+            rsvpLabel.setText("Page is empty or unavailable.");
+            currentWords = null;
             return;
         }
 
-        // Kelimeleri boşluklara göre böl ve boş stringleri temizle
         currentWords = new ArrayList<>(Arrays.asList(currentPageText.trim().split("\\s+")));
-        currentWords.removeIf(String::isEmpty); // lambda ile boş stringleri kaldır
+        currentWords.removeIf(String::isEmpty);
 
-        currentWordIndex = 0;
+        currentWordIndex = lastRsvpWordIndexForCurrentPage;
+
+        if (currentWordIndex >= currentWords.size() && !currentWords.isEmpty()) {
+            // Eğer kaydedilen indeks sayfanın sonundaysa, o sayfa için baştan başla.
+            // Otomatik sayfa geçişi showNextRsvpWord içinde ele alınacak.
+            currentWordIndex = 0;
+            lastRsvpWordIndexForCurrentPage = 0; // Bu sayfa için sıfırla
+        }
 
         if (currentWords.isEmpty()) {
-            rsvpLabel.setText("Page is effectively empty."); // RSVP label'ında göster
-            // stopRsvp(); // Timer zaten çalışmıyor olabilir
+            rsvpLabel.setText("Page is effectively empty.");
             return;
         }
 
-        rsvpTimer.setDelay(rsvpDelayMilliseconds); // Mevcut hız ayarını kullan
+        rsvpTimer.setDelay(rsvpDelayMilliseconds);
         rsvpTimer.start();
-        showNextRsvpWord(); // İlk kelimeyi hemen göster
+        // İlk kelimeyi hemen göstermek için timer'ın ilk tetiklenmesini beklemek yerine
+        // direkt çağırabiliriz, ancak timer zaten hemen tetiklenecek şekilde ayarlıysa gerek yok.
+        // Eğer ilk kelime hemen gösterilmiyorsa:
+        if (currentWordIndex < currentWords.size()) { // Hala gösterilecek kelime varsa
+            rsvpLabel.setText(currentWords.get(currentWordIndex));
+            // currentWordIndex++; // Timer bir sonraki için zaten artıracak, ilk kelime için burada artırmaya gerek yok
+        } else { // Kalınan yerden devam edilecek kelime kalmadıysa (örn. sayfa sonu ve index sıfırlanmadıysa)
+            showNextRsvpWord(); // Sayfa sonu mantığını tetikle
+        }
     }
 
     private void stopRsvp() {
         if (rsvpTimer != null) {
             rsvpTimer.stop();
         }
+        // O an gösterilmekte olan kelimenin indeksini kaydet
+        if (currentWords != null && currentWordIndex > 0 && currentWordIndex <= currentWords.size()) {
+            lastRsvpWordIndexForCurrentPage = currentWordIndex -1; // Son gösterilen kelimenin indeksi
+        } else if (currentWords != null && currentWordIndex == 0 && !currentWords.isEmpty()) {
+            lastRsvpWordIndexForCurrentPage = 0; // Eğer hiç kelime gösterilmeden durdurulursa
+        }
+        // Eğer currentWordIndex zaten currentWords.size() ise, sayfanın sonu demektir,
+        // bir sonraki başlangıçta startRsvp bunu ele alacaktır.
     }
 
     private void showNextRsvpWord() {
         if (currentWords == null || currentWordIndex >= currentWords.size()) {
-            // Sayfanın sonuna gelindi
             if (currentBook != null && currentBook.nextPage()) {
-                // Bir sonraki sayfaya başarıyla geçildi
                 updatePageInfo();
-                startRsvp(); // Yeni sayfa için RSVP'yi yeniden başlat
-                // startRsvp zaten ilk kelimeyi gösterecek showNextRsvpWord'ü çağıracak.
+                lastRsvpWordIndexForCurrentPage = 0; // Yeni sayfa, indeksi sıfırla
+                startRsvp();
             } else {
-                // Kitabın sonu veya sonraki sayfaya geçilemedi
                 rsvpLabel.setText("End of Book");
                 stopRsvp();
-                if (isRsvpActive) { // Eğer hala RSVP modundaysak normale dön
+                if (isRsvpActive) {
                     toggleRsvp();
                 }
             }
@@ -260,26 +265,13 @@ public class ReadingFrame extends JFrame {
         }
 
         String word = currentWords.get(currentWordIndex);
-        // Boş stringleri atlama mantığına artık gerek yok çünkü startRsvp'de temizliyoruz.
-        // Yine de bir güvenlik önlemi olarak kalabilir.
-        // while (word.trim().isEmpty() && currentWordIndex < currentWords.size() - 1) {
-        //    currentWordIndex++;
-        //    word = currentWords.get(currentWordIndex);
-        // }
-        // if(word.trim().isEmpty() && currentWordIndex >= currentWords.size() -1){
-        //     // Bu durum yukarıdaki ilk if bloğu tarafından yakalanmalı
-        //     showNextRsvpWord(); // Rekürsif çağrı ile bir sonraki kelimeye (veya sayfa sonuna) git
-        //     return;
-        // }
-
         rsvpLabel.setText(word);
         currentWordIndex++;
     }
 
-
     private void openFile() {
         if (isRsvpActive) {
-            toggleRsvp(); // Yeni dosya açmadan önce RSVP'yi durdur ve normale dön
+            toggleRsvp();
         }
 
         JFileChooser fileChooser = new JFileChooser();
@@ -288,9 +280,8 @@ public class ReadingFrame extends JFrame {
         FileNameExtensionFilter pdfFilter = new FileNameExtensionFilter("PDF Files (*.pdf)", "pdf");
         fileChooser.addChoosableFileFilter(pdfFilter);
         fileChooser.addChoosableFileFilter(txtFilter);
-        fileChooser.setFileFilter(pdfFilter); // Varsayılan olarak PDF filtresi
+        fileChooser.setFileFilter(pdfFilter);
         fileChooser.setAcceptAllFileFilterUsed(true);
-
 
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
@@ -303,26 +294,31 @@ public class ReadingFrame extends JFrame {
             } else if (fileName.endsWith(".pdf")) {
                 currentBook = PdfFileLoader.loadBook(selectedFile);
             } else {
-                // Eğer dosya uzantısı bilinenlerden biri değilse ve "Tüm Dosyalar" seçiliyse
                 if (fileChooser.getFileFilter() instanceof FileNameExtensionFilter) {
                     FileNameExtensionFilter selectedFilter = (FileNameExtensionFilter) fileChooser.getFileFilter();
-                    boolean knownType = false;
+                    boolean isSupportedByFilter = false;
                     for (String ext : selectedFilter.getExtensions()) {
                         if (fileName.endsWith("." + ext)) {
-                            knownType = true;
+                            isSupportedByFilter = true;
                             break;
                         }
                     }
-                    if (!knownType) { // Eğer seçilen filtreye uymayan bir dosya ise
+                    // Eğer seçilen filtre .txt veya .pdf değilse ve dosya onlardan biri değilse hata ver.
+                    // Ya da "Tüm Dosyalar" seçiliyse ve dosya uzantısı .txt veya .pdf değilse.
+                    if (!isSupportedByFilter && (!fileName.endsWith(".txt") && !fileName.endsWith(".pdf"))) {
+                        JOptionPane.showMessageDialog(this, "Unsupported file type: " + fileName + "\nPlease select a .txt or .pdf file.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    } else if (!fileName.endsWith(".txt") && !fileName.endsWith(".pdf")){
+                        // Filtreye uyuyor ama yine de desteklenmeyen bir durum (bu olmamalı)
+                        JOptionPane.showMessageDialog(this, "Selected file is not a .txt or .pdf file despite the filter.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                } else { // "Tüm Dosyalar" filtresi seçili
+                    if (!fileName.endsWith(".txt") && !fileName.endsWith(".pdf")){
                         JOptionPane.showMessageDialog(this, "Unsupported file type: " + fileName + "\nPlease select a .txt or .pdf file.", "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                } else { // "Tüm Dosyalar" seçili ve dosya .txt veya .pdf değilse
-                    JOptionPane.showMessageDialog(this, "Unsupported file type: " + fileName + "\nPlease select a .txt or .pdf file.", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
                 }
-                // Bu noktaya gelinirse, dosya uzantısı desteklenmiyor demektir.
-                // Yukarıdaki kontrollerden biri zaten yakalamış olmalı.
             }
 
             if (currentBook != null) {
@@ -331,10 +327,10 @@ public class ReadingFrame extends JFrame {
                     windowTitle += " by " + currentBook.getAuthor();
                 }
                 setTitle(windowTitle + " - Book Reader");
-                updateUI(); // Bu, RSVP durumunu da sıfırlar (normal görünüme döner)
+                lastRsvpWordIndexForCurrentPage = 0; // Yeni kitap, RSVP indeksini sıfırla
+                updateUI();
             } else {
-                // Sadece desteklenen dosya tipleri için yükleme başarısız olduğunda gösterilmeli.
-                if (fileName.endsWith(".txt") || fileName.endsWith(".pdf")) {
+                if (fileName.endsWith(".txt") || fileName.endsWith(".pdf")) { // Sadece desteklenen tipler için yükleme hatası göster
                     JOptionPane.showMessageDialog(this, "Could not load book from " + selectedFile.getName(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
@@ -353,13 +349,11 @@ public class ReadingFrame extends JFrame {
         }
     }
 
-
     private void updateUI() {
         if (isRsvpActive) {
-            toggleRsvp(); // UI güncellenmeden önce RSVP'yi durdur ve normale dön
+            toggleRsvp();
         } else {
-            // Zaten normal moddaysak, CardLayout'un doğru görünümde olduğundan emin ol
-            if (cardLayout != null && centerPanel != null) { // Bileşenler oluşturulduysa
+            if (cardLayout != null && centerPanel != null) {
                 cardLayout.show(centerPanel, "NORMAL_VIEW");
             }
         }
@@ -369,12 +363,12 @@ public class ReadingFrame extends JFrame {
             bookTextArea.setCaretPosition(0);
             updatePageInfo();
             rsvpButton.setEnabled(true);
-            speedSlider.setEnabled(true); // Kitap varsa hız ayarı aktif olsun
+            speedSlider.setEnabled(true);
         } else {
             bookTextArea.setText("Open a book using File > Open Book...");
             updatePageInfo();
             rsvpButton.setEnabled(false);
-            speedSlider.setEnabled(false); // Kitap yoksa hız ayarı pasif
+            speedSlider.setEnabled(false);
         }
         updatePageNavigationButtons();
     }
@@ -390,8 +384,6 @@ public class ReadingFrame extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new ReadingFrame().setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new ReadingFrame().setVisible(true));
     }
 }
